@@ -6,7 +6,7 @@ STM32F103 (LL, bez RTOS) odczytuje BME280 po I²C, pakuje ramki i wysyła po UAR
 
 RPi3 (Raspberry Pi OS, C++) odbiera strumień z /dev/serial0, składa ramki, weryfikuje CRC16 i wypisuje dane.
 
-Kolejny etap refaktorycazja kodu.
+Kolejny etap refaktoryzacja kodu.
 
 Sprzęt
 ------------------------------------
