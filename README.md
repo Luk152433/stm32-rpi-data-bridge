@@ -21,14 +21,20 @@ Poziomy: 3.3V (UART)
 STM32 - build & flash
 ------------------------------------
 Otwórz projekt stm32 w CubeIDE.
+
 Zbuduj (Release/Debug).
+
 Wgraj przez ST-Link
 
 RPi3 - build & run
 ------------------------------------
 cd rpi_gateway
+
 mkdir -p build && cd build
+
 cmake ..
+
 make -j
+
 ./rpi_gateway
 
