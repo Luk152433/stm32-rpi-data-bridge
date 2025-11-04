@@ -9,7 +9,9 @@
 #include <sys/epoll.h>
 #include <errno.h>
 #include <stdio.h>
+#include <vector>
+#include <cstdint>
 
 
 int open_serial(const std::string& dev, int baud);
-void read_serial(int port);
+std::vector<uint8_t> read_serial(int port);

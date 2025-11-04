@@ -19,8 +19,8 @@ int open_serial(const std::string& port, int baud)
         tty.c_cflag &= ~  PARENB;  //wylaczenie parzystosci
           tty.c_cflag &= ~CSTOPB;  // czyscimy zeby jeden bit stopu
         tty.c_cflag |= CS8;                 // control
-        tty.c_cflag |= CREAD;  // zalacza odbieranie?
-         tty.c_cflag |= CLOCAL; // nie wylacza lini   
+        tty.c_cflag |= CREAD;  // zalacza odbieranie
+         tty.c_cflag |= CLOCAL; // nie wylacza   
 
         tty.c_lflag &= ~ ISIG;
         tty.c_lflag &= ~ ICANON;
@@ -47,18 +47,22 @@ int open_serial(const std::string& port, int baud)
         return serial_port;
 }
 
-void read_serial(int port)
+std::vector<uint8_t> read_serial(int port)
 {
+    std::vector<uint8_t> data;
     uint8_t buf[256];
+
     ssize_t n = ::read(port, buf, sizeof(buf));
     if (n > 0) {
         printf("Odebrano %zd bajtów:\n", n);
-        for (ssize_t i = 0; i < n; ++i)
-            printf("%02X ", buf[i]);
-        printf("\n");
+          data.assign(buf, buf + n);
+
     } else if (n < 0 && errno != EAGAIN) {
         perror("read");
     }
+
+    return data;
+
 }
 
 static speed_t to_baud(int b){
