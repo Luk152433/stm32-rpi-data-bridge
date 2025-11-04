@@ -84,7 +84,8 @@ int main(void) {
 	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
 	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOA);
 	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOB);
-	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_USART2);
+
+	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_USART1);
 	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_I2C1);
 
 	I2C_TypeDef *i2c = I2C1;
@@ -112,22 +113,22 @@ int main(void) {
 	s_I2C1_SDA.Speed = LL_GPIO_SPEED_FREQ_LOW;
 	LL_GPIO_Init(GPIOB, &s_I2C1_SDA);
 
-	LL_GPIO_InitTypeDef s_TXuart2;
-	s_TXuart2.Pin = LL_GPIO_PIN_2;
-	s_TXuart2.Mode = LL_GPIO_MODE_ALTERNATE;
-	s_TXuart2.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-	s_TXuart2.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-	LL_GPIO_Init(GPIOA, &s_TXuart2);
+	LL_GPIO_InitTypeDef s_TXuart1;
+	s_TXuart1.Pin = LL_GPIO_PIN_9;
+	s_TXuart1.Mode = LL_GPIO_MODE_ALTERNATE;
+	s_TXuart1.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+	s_TXuart1.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+	LL_GPIO_Init(GPIOA, &s_TXuart1);
 
-	LL_GPIO_InitTypeDef s_RXuart2;
-	s_RXuart2.Pin = LL_GPIO_PIN_3;
-	s_RXuart2.Mode = LL_GPIO_MODE_INPUT;
-	s_RXuart2.Pull = LL_GPIO_PULL_UP;
+	LL_GPIO_InitTypeDef s_RXuart1;
+	s_RXuart1.Pin = LL_GPIO_PIN_10;
+	s_RXuart1.Mode = LL_GPIO_MODE_INPUT;
+	s_RXuart1.Pull = LL_GPIO_PULL_UP;
 
-	LL_GPIO_Init(GPIOA, &s_RXuart2);
+	LL_GPIO_Init(GPIOA, &s_RXuart1);
 	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_AFIO);
-	LL_GPIO_AF_DisableRemap_USART2();
-	LL_GPIO_SetPinPull(GPIOA, LL_GPIO_PIN_3, LL_GPIO_PULL_UP);
+	//LL_GPIO_AF_DisableRemap_USART2();
+	LL_GPIO_SetPinPull(GPIOA, LL_GPIO_PIN_10, LL_GPIO_PULL_UP);
 
 	LL_USART_InitTypeDef init = { 0 };
 
@@ -142,11 +143,11 @@ int main(void) {
 	LL_RCC_ClocksTypeDef clk;
 	LL_RCC_GetSystemClocksFreq(&clk);
 
-	LL_USART_Init(USART2, &init);
-	LL_USART_ConfigAsyncMode(USART2);
-	LL_USART_SetBaudRate(USART2, clk.PCLK1_Frequency, 9600);
+	LL_USART_Init(USART1, &init);
+	LL_USART_ConfigAsyncMode(USART1);
+	LL_USART_SetBaudRate(USART1, clk.PCLK2_Frequency , 9600);
 
-	LL_USART_Enable(USART2);
+	LL_USART_Enable(USART1);
 
 	LL_I2C_Disable(i2c);
 
@@ -165,23 +166,23 @@ int main(void) {
 
 	char tx_bufferg[] = "Hello from STM3!\r\n";
 
-	LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_7,
+	LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_4,
 			LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-	LL_DMA_SetPeriphIncMode(DMA1, LL_DMA_CHANNEL_7, LL_DMA_PERIPH_NOINCREMENT);
-	LL_DMA_SetMemoryIncMode(DMA1, LL_DMA_CHANNEL_7, LL_DMA_MEMORY_INCREMENT); // inkrement chyba
+	LL_DMA_SetPeriphIncMode(DMA1, LL_DMA_CHANNEL_4, LL_DMA_PERIPH_NOINCREMENT);
+	LL_DMA_SetMemoryIncMode(DMA1, LL_DMA_CHANNEL_4, LL_DMA_MEMORY_INCREMENT); // inkrement
 
-	LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_7, LL_DMA_PDATAALIGN_BYTE);
-	LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_7, LL_DMA_MDATAALIGN_BYTE);
+	LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_4, LL_DMA_PDATAALIGN_BYTE);
+	LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_4, LL_DMA_MDATAALIGN_BYTE);
 
-	LL_DMA_SetChannelPriorityLevel(DMA1, LL_DMA_CHANNEL_7, LL_DMA_PRIORITY_LOW);
+	LL_DMA_SetChannelPriorityLevel(DMA1, LL_DMA_CHANNEL_4, LL_DMA_PRIORITY_LOW);
 
-	LL_DMA_SetPeriphAddress(DMA1, LL_DMA_CHANNEL_7,
-			(uint32_t) LL_USART_DMA_GetRegAddr(USART2));
+	LL_DMA_SetPeriphAddress(DMA1, LL_DMA_CHANNEL_4,
+			(uint32_t) LL_USART_DMA_GetRegAddr(USART1));
 
-	LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_7);
-	LL_USART_EnableDMAReq_TX(USART2);
-	NVIC_SetPriority(DMA1_Channel7_IRQn, 0);
-	NVIC_EnableIRQ(DMA1_Channel7_IRQn);
+	LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_4);
+	LL_USART_EnableDMAReq_TX(USART1);
+	NVIC_SetPriority(DMA1_Channel4_IRQn, 0);
+	NVIC_EnableIRQ(DMA1_Channel4_IRQn);
 	LL_I2C_Enable(i2c);
 	__enable_irq();
 
@@ -202,14 +203,8 @@ int main(void) {
 	parse_humidity_calib_data(calib_data2, &v_bme280_dev);
 
 	while (1) {
-		frame.sof = 0xAA55;
-		frame.timestamp = tick;
-		frame.temp = 253 + (tick % 10);
-		frame.press = 1013;
-		frame.hum = 45;
 
-		frame.crc = CRC16_CCITT((uint8_t*) &frame,
-				sizeof(DataFrame_t) - sizeof(frame.crc));
+
 
 
 
@@ -219,31 +214,57 @@ int main(void) {
 		parse_sensor_data(raw, &v_uncomp_data);
 
 		bme280_compensate_data(0x07, &v_uncomp_data, &v_bme280_data, &v_bme280_dev.calib_data);
-		//bme280_compensate_data(BME280_HUM, &v_uncomp_data, &v_bme280_data, &v_bme280_dev.calib_data);
 
-	//bme280_compensate_data(BME280_PRESS, &v_uncomp_data, &v_bme280_data, &v_bme280_dev.calib_data);
+
+
+	    /*  (×10, zaokrąglenie) */
+	    double tC = v_bme280_data.temperature;
+	    int32_t t10 = (int32_t)(tC * 10.0 + (tC >= 0 ? 0.5 : -0.5));
+	    if (t10 > INT16_MAX) t10 = INT16_MAX;
+	    if (t10 < INT16_MIN) t10 = INT16_MIN;
+
+
+	    double pPa = v_bme280_data.pressure;
+	    int32_t p_hPa = (int32_t)((pPa + 50.0) / 100.0);   // +50 dla zaokrąglenia
+	    if (p_hPa < 0) p_hPa = 0;
+	    if (p_hPa > 0xFFFF) p_hPa = 0xFFFF;
+
+
+	    double h = v_bme280_data.humidity;
+	    int32_t h_pct = (int32_t)(h + 0.5);
+	    if (h_pct < 0) h_pct = 0;
+	    if (h_pct > 100) h_pct = 100;
+
+
+	    frame.sof       = 0xAA55;
+	    frame.timestamp = tick;
+	    frame.temp      = (int16_t)t10;
+	    frame.press     = (uint16_t)p_hPa;
+	    frame.hum       = (uint16_t)h_pct;
+
+	    frame.crc = CRC16_CCITT((uint8_t*)&frame, sizeof(DataFrame_t) - sizeof(frame.crc));
 
 		if (!tx_busy) {
 			tx_busy = 1;
-			LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_7);
-			LL_DMA_SetMemoryAddress(DMA1, LL_DMA_CHANNEL_7, (uint32_t) &frame);
-			LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_7, sizeof(frame));
-			LL_DMA_ClearFlag_GI7(DMA1); //
-			LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_7); //
+			LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_4);
+			LL_DMA_SetMemoryAddress(DMA1, LL_DMA_CHANNEL_4, (uint32_t) &frame);
+			LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_4, sizeof(frame));
+			LL_DMA_ClearFlag_GI4(DMA1); //
+			LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_4); //
 		}
 
-		delay_ms(3000);
+		delay_ms(5000);
 
 	}
 ////////////////////////////////////////////////////
 }
 
-void DMA1_Channel7_IRQHandler(void) {
-	if (LL_DMA_IsActiveFlag_TC7(DMA1)) {
-		LL_DMA_ClearFlag_TC7(DMA1);
-		LL_DMA_ClearFlag_HT7(DMA1);
-		//LL_DMA_ClearFlag_GI7(DMA1);
-		LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_7);
+void DMA1_Channel4_IRQHandler(void) {
+	if (LL_DMA_IsActiveFlag_TC4(DMA1)) {
+		LL_DMA_ClearFlag_TC4(DMA1);
+		LL_DMA_ClearFlag_HT4(DMA1);
+		//LL_DMA_ClearFlag_GI4(DMA1);
+		LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_4);
 		tx_busy = 0;
 		LL_GPIO_TogglePin(GPIOA, LL_GPIO_PIN_5);
 	}
