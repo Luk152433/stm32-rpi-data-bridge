@@ -30,18 +30,12 @@ static volatile uint32_t tick = 0;
 static void delay_ms(uint32_t ms);
 
 static volatile uint8_t tx_busy = 0;
-static uint8_t tx_buf[] = "Hello from DMA!\r\n"; // w RAM
 
-uint16_t CRC16_CCITT(const uint8_t *data, uint16_t length);
 
-typedef struct __attribute__((packed)) {
-	uint16_t sof;       // 0xAA55 (LE → 55 AA na łączu)
-	uint32_t timestamp; // ms
-	int16_t temp;      // 25.3°C → 253
-	uint16_t press;     // 1013 hPa → 1013
-	uint16_t hum;       // %
-	uint16_t crc;
-} DataFrame_t;
+//uint16_t CRC16_CCITT(const uint8_t *data, uint16_t length);
+
+
+
 
 DataFrame_t frame;
 uint8_t id;
@@ -51,165 +45,37 @@ struct bme280_data v_bme280_data;
 uint8_t calib_data1[26];
 uint8_t calib_data2[7];
 
-
 int main(void) {
-	LL_FLASH_SetLatency(LL_FLASH_LATENCY_2);
-	LL_RCC_HSE_Enable();
-	while (LL_RCC_HSE_IsReady() != 1) {
 
-	}
 
-	LL_RCC_PLL_ConfigDomain_SYS(LL_RCC_PLLSOURCE_HSE_DIV_1, LL_RCC_PLL_MUL_9); //72 Mhz
+	 SystemClock_Config();
+	 GPIO_Config();
+     USART1_Config();
+     I2C1_Config();
+     DMA_Config();
 
-	LL_RCC_PLL_Enable();
-	while (LL_RCC_PLL_IsReady() != 1) {
-
-	}
-
-	LL_RCC_SetAHBPrescaler(LL_RCC_SYSCLK_DIV_1);		//AHB
-
-	LL_RCC_SetAPB2Prescaler(LL_RCC_APB2_DIV_1);
-	LL_RCC_SetAPB1Prescaler(LL_RCC_APB1_DIV_2);
-
-	LL_RCC_SetSysClkSource(LL_RCC_SYS_CLKSOURCE_PLL);
-	while (LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_PLL) {
-
-	}
-
-	LL_SetSystemCoreClock(72000000);
-	LL_Init1msTick(72000000);
-
-	LL_SYSTICK_EnableIT();
-
-	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
-	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOA);
-	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOB);
-
-	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_USART1);
-	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_I2C1);
-
-	I2C_TypeDef *i2c = I2C1;
-
-	LL_GPIO_InitTypeDef sVariable;
-	sVariable.Pin = LL_GPIO_PIN_5;
-	sVariable.Mode = LL_GPIO_MODE_OUTPUT;
-	sVariable.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-	sVariable.Speed = LL_GPIO_SPEED_FREQ_LOW;
-	LL_GPIO_Init(GPIOA, &sVariable);
-
-	LL_GPIO_InitTypeDef s_I2C1_SCL;
-	s_I2C1_SCL.Pin = LL_GPIO_PIN_6;
-	s_I2C1_SCL.Mode = LL_GPIO_MODE_ALTERNATE;
-	s_I2C1_SCL.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
-	//s_I2C1_SCL.Pull=;
-	s_I2C1_SCL.Speed = LL_GPIO_SPEED_FREQ_LOW;
-	LL_GPIO_Init(GPIOB, &s_I2C1_SCL);
-
-	LL_GPIO_InitTypeDef s_I2C1_SDA;
-	s_I2C1_SDA.Pin = LL_GPIO_PIN_7;
-	s_I2C1_SDA.Mode = LL_GPIO_MODE_ALTERNATE;
-	s_I2C1_SDA.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
-	//s_I2C1_SDA.Pull=;
-	s_I2C1_SDA.Speed = LL_GPIO_SPEED_FREQ_LOW;
-	LL_GPIO_Init(GPIOB, &s_I2C1_SDA);
-
-	LL_GPIO_InitTypeDef s_TXuart1;
-	s_TXuart1.Pin = LL_GPIO_PIN_9;
-	s_TXuart1.Mode = LL_GPIO_MODE_ALTERNATE;
-	s_TXuart1.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-	s_TXuart1.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-	LL_GPIO_Init(GPIOA, &s_TXuart1);
-
-	LL_GPIO_InitTypeDef s_RXuart1;
-	s_RXuart1.Pin = LL_GPIO_PIN_10;
-	s_RXuart1.Mode = LL_GPIO_MODE_INPUT;
-	s_RXuart1.Pull = LL_GPIO_PULL_UP;
-
-	LL_GPIO_Init(GPIOA, &s_RXuart1);
-	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_AFIO);
-	//LL_GPIO_AF_DisableRemap_USART2();
-	LL_GPIO_SetPinPull(GPIOA, LL_GPIO_PIN_10, LL_GPIO_PULL_UP);
-
-	LL_USART_InitTypeDef init = { 0 };
-
-	init.BaudRate = 9600;
-	init.DataWidth = LL_USART_DATAWIDTH_8B;
-	init.StopBits = LL_USART_STOPBITS_1;
-	init.Parity = LL_USART_PARITY_NONE;
-	init.TransferDirection = LL_USART_DIRECTION_TX_RX;
-	init.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
-	init.OverSampling = LL_USART_OVERSAMPLING_16;
-
-	LL_RCC_ClocksTypeDef clk;
-	LL_RCC_GetSystemClocksFreq(&clk);
-
-	LL_USART_Init(USART1, &init);
-	LL_USART_ConfigAsyncMode(USART1);
-	LL_USART_SetBaudRate(USART1, clk.PCLK2_Frequency , 9600);
-
-	LL_USART_Enable(USART1);
-
-	LL_I2C_Disable(i2c);
-
-	LL_I2C_EnableClockStretching(i2c);
-	//LL_I2C_SetClockSpeedMode();
-	LL_I2C_ConfigSpeed(i2c, clk.PCLK1_Frequency, 400000, LL_I2C_DUTYCYCLE_2);
-	LL_I2C_SetMode(i2c, LL_I2C_MODE_I2C);
-
-	/////
-	//LL_I2C_GenerateStartCondition(i2c);
-	//LL_I2C_AcknowledgeNextData(i2c, LL_I2C_ACK);
-
-	////////
-
-	const char msg[] = "Hello from STM323!\r\n";
-
-	char tx_bufferg[] = "Hello from STM3!\r\n";
-
-	LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_4,
-			LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-	LL_DMA_SetPeriphIncMode(DMA1, LL_DMA_CHANNEL_4, LL_DMA_PERIPH_NOINCREMENT);
-	LL_DMA_SetMemoryIncMode(DMA1, LL_DMA_CHANNEL_4, LL_DMA_MEMORY_INCREMENT); // inkrement
-
-	LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_4, LL_DMA_PDATAALIGN_BYTE);
-	LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_4, LL_DMA_MDATAALIGN_BYTE);
-
-	LL_DMA_SetChannelPriorityLevel(DMA1, LL_DMA_CHANNEL_4, LL_DMA_PRIORITY_LOW);
-
-	LL_DMA_SetPeriphAddress(DMA1, LL_DMA_CHANNEL_4,
-			(uint32_t) LL_USART_DMA_GetRegAddr(USART1));
-
-	LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_4);
-	LL_USART_EnableDMAReq_TX(USART1);
-	NVIC_SetPriority(DMA1_Channel4_IRQn, 0);
-	NVIC_EnableIRQ(DMA1_Channel4_IRQn);
-	LL_I2C_Enable(i2c);
 	__enable_irq();
 
 	uint8_t ctrl_hum  = 0x05;  // osrs_h = x16
 	uint8_t ctrl_meas = 0xB7;  // osrs_t = x16, osrs_p = x16, mode = normal    0b101_101_11
 	uint8_t config    = 0x10;  // filter x16, standby 0.5ms
 
-	i2c_reg_write(i2c, 0x76, 0xF5, &config, 1);
-	i2c_reg_write(i2c, 0x76, 0xF2, &ctrl_hum, 1);
-	i2c_reg_write(i2c, 0x76, 0xF4, &ctrl_meas, 1);
+	i2c_reg_write(g_i2c, 0x76, 0xF5, &config, 1);
+	i2c_reg_write(g_i2c, 0x76, 0xF2, &ctrl_hum, 1);
+	i2c_reg_write(g_i2c, 0x76, 0xF4, &ctrl_meas, 1);
 
-	i2c_reg_read( i2c, 0x76, 0xD0, &id, 1);
+	i2c_reg_read( g_i2c, 0x76, 0xD0, &id, 1);
 
-	i2c_reg_read(i2c, 0x76, 0x88, calib_data1, 26);
-	i2c_reg_read(i2c, 0x76, 0xE1, calib_data2, 7);
+	i2c_reg_read(g_i2c, 0x76, 0x88, calib_data1, 26);
+	i2c_reg_read(g_i2c, 0x76, 0xE1, calib_data2, 7);
 
 	parse_temp_press_calib_data(calib_data1, &v_bme280_dev);
 	parse_humidity_calib_data(calib_data2, &v_bme280_dev);
 
 	while (1) {
 
-
-
-
-
 		uint8_t raw[8];
-		i2c_reg_read(i2c, 0x76, 0xF7, raw, 8);
+		i2c_reg_read(g_i2c, 0x76, 0xF7, raw, 8);
 
 		parse_sensor_data(raw, &v_uncomp_data);
 
@@ -280,20 +146,5 @@ static void delay_ms(uint32_t ms) {
 	}
 }
 
-uint16_t CRC16_CCITT(const uint8_t *data, uint16_t length) {
-	uint16_t crc = 0xFFFF;
-
-	for (uint16_t i = 0; i < length; i++) {
-		crc ^= ((uint16_t) data[i] << 8);
-		for (uint8_t j = 0; j < 8; j++) {
-			if (crc & 0x8000)
-				crc = (crc << 1) ^ 0x1021;
-			else
-				crc <<= 1;
-		}
-	}
-
-	return crc;
-}
 
 

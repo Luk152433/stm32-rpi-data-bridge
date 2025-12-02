@@ -1,6 +1,12 @@
+/*
+ * hw.h
+ *
+ *  Created on: Dec 2, 2025
+ *      Author: lukas
+ */
 
-#ifndef MAIN_H_
-#define MAIN_H_
+#ifndef HW_H_
+#define HW_H_
 
 #include "stm32f1xx_ll_bus.h"
 #include "stm32f1xx_ll_gpio.h"
@@ -13,12 +19,11 @@
 #include "stm32f1xx_ll_i2c.h"
 
 
-#include "bme280.h"
-#include "frame.h"
-#include "hw.h"
-#include "i2c.h"
+extern I2C_TypeDef *g_i2c;
+void SystemClock_Config(void);
+void    GPIO_Config(void);
+void    USART1_Config(void);
+void    I2C1_Config(void);
+void    DMA_Config(void);
 
-
-
-
-#endif /* MAIN_H_ */
+#endif /* HW_H_ */
